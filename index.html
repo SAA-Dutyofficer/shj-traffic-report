@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SHJ Traffic Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0A1628;color:#E8EDF5;min-height:100vh;padding-bottom:30px}
+
+/* ── FORM UI ── */
+.app-bar{background:linear-gradient(135deg,#0D2E5C,#1565C0);padding:14px 16px;display:flex;align-items:center;gap:10px}
+.app-bar h1{font-size:17px;font-weight:800;color:#fff}
+.app-bar p{font-size:10px;color:rgba(255,255,255,0.5)}
+.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;margin:10px 12px 0;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.1)}
+.tb{padding:9px 4px;text-align:center;font-size:11px;font-weight:700;cursor:pointer;background:#0D1F3C;color:rgba(255,255,255,0.3);border-right:1px solid rgba(255,255,255,0.08)}
+.tb:last-child{border-right:none}
+.tb.on{background:#1565C0;color:#fff}
+.sec{display:none}.sec.on{display:block}
+.card{background:#0D1F3C;border:1px solid rgba(255,255,255,0.08);border-radius:10px;margin:8px 12px 0}
+.ch{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:7px}
+.ci{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;background:rgba(255,255,255,0.07)}
+.ct{font-size:13px;font-weight:700;color:#fff}
+.cb{padding:10px 12px}
+.uz{border:2px dashed rgba(255,255,255,0.15);border-radius:8px;padding:14px;text-align:center;cursor:pointer;position:relative;transition:all .2s;margin-bottom:8px}
+.uz:last-child{margin-bottom:0}
+.uz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uz.on{border-color:#1565C0;border-style:solid;background:rgba(21,101,192,0.08)}
+.uz-icon{font-size:20px;margin-bottom:4px}
+.uz-t{font-size:12px;font-weight:600;color:rgba(255,255,255,0.6)}
+.uz-s{font-size:10px;color:rgba(255,255,255,0.25);margin-top:1px}
+.uz-ok{font-size:10px;font-weight:600;color:#64B5F6;margin-top:4px;display:none}
+.ps{font-size:10px;margin-top:4px;min-height:12px}
+.ps-ok{color:#64B5F6}.ps-err{color:#ff6b6b}
+.fl{margin-bottom:8px}.fl-l{font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+input[type=date]{width:100%;background:#0A1628;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:10px 11px;font-size:14px;color:#E8EDF5;font-family:inherit;outline:none;-webkit-appearance:none}
+input:focus{border-color:#1565C0}
+.ib{background:rgba(21,101,192,0.1);border:1px solid rgba(21,101,192,0.2);border-radius:7px;padding:8px 10px;font-size:10px;color:rgba(100,181,246,0.8);line-height:1.5;margin-top:7px}
+.btn-gen{display:block;width:calc(100% - 24px);margin:10px 12px 0;background:linear-gradient(135deg,#0D2E5C,#1565C0);color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}
+.btn-gen:active{opacity:.8}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 12px 0}
+.btn-sm{padding:9px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:#0D1F3C;color:rgba(255,255,255,0.4)}
+
+/* ══ REPORT CARD - matches the image style ══ */
+#report-view{display:none}
+
+.report-card{background:#fff;position:relative;overflow:hidden}
+
+/* HEADER - dark navy with airport image feel */
+.rc-header{
+  background:
+    linear-gradient(135deg,rgba(10,30,61,0.82) 0%,rgba(13,59,140,0.78) 60%,rgba(21,101,192,0.72) 100%),
+    url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&q=80') center/cover no-repeat;
+  padding:18px 18px 16px;
+  position:relative;
+  overflow:hidden;
+  min-height:120px;
+}
+/* Decorative circles like in the image */
+.rc-deco1{position:absolute;right:-30px;top:-30px;width:160px;height:160px;border-radius:50%;border:1px solid rgba(255,255,255,0.06)}
+.rc-deco2{position:absolute;right:-50px;top:-50px;width:220px;height:220px;border-radius:50%;border:1px solid rgba(255,255,255,0.04)}
+.rc-deco3{position:absolute;right:-10px;top:10px;width:100px;height:100px;border-radius:50%;border:1px solid rgba(255,255,255,0.08)}
+/* Plane silhouette top right */
+.rc-plane{position:absolute;right:14px;top:50%;transform:translateY(-50%);opacity:0.12;width:130px}
+.rc-header-inner{position:relative;z-index:2}
+.rc-title{font-size:28px;font-weight:900;color:#fff;letter-spacing:.01em;line-height:1;text-shadow:0 2px 12px rgba(0,0,0,0.3)}
+.rc-sub{font-size:12px;font-weight:700;color:#64B5F6;margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+.rc-date-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:5px 12px;margin-top:10px}
+.rc-date-pill-text{font-size:12px;font-weight:700;color:#fff;letter-spacing:.01em}
+
+/* BODY */
+.rc-body{background:#fff;padding:14px 14px 12px}
+
+/* MAIN STATS - matching image layout */
+.main-stats{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;margin-bottom:10px;align-items:stretch}
+.stat-box{border-radius:12px;padding:14px 10px;text-align:center;position:relative;overflow:hidden}
+.stat-box.arr-box{background:linear-gradient(145deg,#0A2E6E,#1565C0)}
+.stat-box.dep-box{background:linear-gradient(145deg,#0A5C4A,#00897B)}
+.sb-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:5px}
+.sb-icon{font-size:12px}
+.sb-val{font-size:26px;font-weight:900;color:#fff;line-height:1}
+.sb-pax{font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px}
+.sb-pill{display:inline-block;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:#fff;margin-top:7px}
+
+/* CENTER TOTAL - circular like the image */
+.stat-center{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 4px}
+.sc-circle{width:80px;height:80px;border-radius:50%;background:#fff;border:3px solid #E3F2FD;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(13,59,140,0.15)}
+.sc-icon{font-size:16px;margin-bottom:1px}
+.sc-lbl{font-size:8px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.05em;text-align:center;line-height:1.2}
+.sc-val{font-size:16px;font-weight:900;color:#0D2E5C;line-height:1;margin-top:1px}
+
+/* DEP BREAKDOWN */
+.dep-bk{background:#F0F7FF;border:1px solid #BBDEFB;border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.db-header{font-size:9px;font-weight:700;color:#1565C0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px}
+.db-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(21,101,192,0.08)}
+.db-row:last-child{border-bottom:none;padding-bottom:0}
+.db-lbl{font-size:11px;color:#444;display:flex;align-items:center;gap:6px}
+.db-dot{width:8px;height:8px;border-radius:50%}
+.dot-shj{background:#1565C0}
+.dot-conn{background:#00897B}
+.db-val{font-size:14px;font-weight:800;color:#111}
+.db-unit{font-size:9px;color:#999;margin-left:3px;font-weight:400}
+
+/* TOTAL BLOCKS */
+.total-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.total-block{background:#F5F9FF;border:1px solid #BBDEFB;border-radius:10px;padding:12px 10px;text-align:center}
+.tb-icon{font-size:20px;margin-bottom:3px}
+.tb-lbl{font-size:8px;font-weight:700;color:#90A4AE;letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px}
+.tb-val{font-size:28px;font-weight:900;color:#0D2E5C;line-height:1}
+.tb-unit{font-size:9px;color:#90A4AE;margin-top:2px}
+
+/* HIGHLIGHTS */
+.hl-box{background:#F5F9FF;border:1px solid #BBDEFB;border-radius:10px;padding:11px 12px}
+.hl-header{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.hl-header-icon{width:22px;height:22px;border-radius:50%;background:#1565C0;display:flex;align-items:center;justify-content:center;font-size:11px}
+.hl-header-text{font-size:10px;font-weight:800;color:#0D2E5C;letter-spacing:.07em;text-transform:uppercase}
+.hl-items{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.hl-item{text-align:center}
+.hl-item-icon{font-size:22px;margin-bottom:4px;opacity:0.6}
+.hl-item-text{font-size:9px;color:#546E7A;line-height:1.4}
+.hl-item-text strong{color:#0D2E5C;display:block;margin-bottom:2px}
+
+/* FOOTER */
+.rc-footer{
+  background:linear-gradient(135deg,rgba(10,30,61,0.90),rgba(13,59,140,0.88)),
+    url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&q=80') center bottom/cover no-repeat;
+  padding:8px 14px;display:flex;align-items:center;justify-content:space-between}
+.rf-left{font-size:8px;font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:.06em;text-transform:uppercase}
+.rf-plane{opacity:0.4;width:30px}
+
+/* RUNWAY STRIP */
+.runway-strip{height:4px;background:repeating-linear-gradient(90deg,rgba(255,255,255,0.4) 0,rgba(255,255,255,0.4) 20px,transparent 20px,transparent 40px);background-color:#0D2E5C}
+
+/* Screenshot hint */
+.ss-hint{display:none;background:#1565C0;color:#fff;text-align:center;padding:12px;font-size:13px;font-weight:700}
+.excl-note{margin:0 12px 8px;padding:7px 10px;background:rgba(21,101,192,0.1);border:1px solid rgba(21,101,192,0.3);border-radius:7px;font-size:10px;color:#64B5F6}
+
+/* Action buttons */
+.action-wrap{padding:10px 12px;display:flex;gap:8px}
+.btn-action{flex:1;padding:11px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:none}
+.btn-ss{background:linear-gradient(135deg,#0D2E5C,#1565C0);color:#fff}
+.btn-bk{background:#0D1F3C;border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6)}
+
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(50px);background:#1565C0;color:#fff;padding:9px 18px;border-radius:7px;font-size:12px;font-weight:600;z-index:999;transition:all .3s;opacity:0;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast">Done!</div>
+
+<!-- FORM VIEW -->
+<div id="form-view">
+  <div class="app-bar">
+    <div>
+      <h1>SHJ Traffic Report</h1>
+      <p>Sharjah Airport - Operations</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tb on" id="tab-m" onclick="sw('m')">&#9728; Morning</div>
+    <div class="tb" id="tab-n" onclick="sw('n')">&#9790; Night</div>
+    <div class="tb" id="tab-c" onclick="sw('c')">&#128202; 24hr</div>
+  </div>
+
+  <div class="sec on" id="sec-m">
+    <div class="card" style="margin-top:8px">
+      <div class="ch"><div class="ci">&#128197;</div><div class="ct">Date</div></div>
+      <div class="cb"><div class="fl"><div class="fl-l">Operations Date</div><input type="date" id="m-date"></div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ci">&#128194;</div><div class="ct">Morning Allocation Excel</div></div>
+      <div class="cb">
+        <div class="uz" id="uz-m" ondragover="dov(event,'m')" ondragleave="dlv('m')" ondrop="ddr(event,'m')">
+          <input type="file" accept=".xlsx,.xls" onchange="ldf(this,'m')">
+          <div class="uz-icon">&#128203;</div>
+          <div class="uz-t">Drop or tap to browse</div>
+          <div class="uz-s">Morning gate allocation (06:00-18:00)</div>
+          <div class="uz-ok" id="ok-m"></div>
+        </div>
+        <div class="ps" id="ps-m"></div>
+        <div class="ib">Reads BKLD, SHJ and INBD columns. Cancelled flights excluded automatically.</div>
+      </div>
+    </div>
+    <button class="btn-gen" onclick="gen('m')">Generate Morning Report</button>
+    <div class="btn-row">
+      <button class="btn-sm" onclick="clf('m')">Clear</button>
+      <button class="btn-sm" onclick="sw('n')">Night Shift -></button>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-n">
+    <div class="card" style="margin-top:8px">
+      <div class="ch"><div class="ci">&#128197;</div><div class="ct">Date</div></div>
+      <div class="cb">
+        <div class="fl"><div class="fl-l">Start Date (18:00)</div><input type="date" id="n-date"></div>
+        <div class="ib">Night = 18:00 this date to 06:00 next day.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ci">&#128194;</div><div class="ct">Night Allocation Excel</div></div>
+      <div class="cb">
+        <div class="uz" id="uz-n" ondragover="dov(event,'n')" ondragleave="dlv('n')" ondrop="ddr(event,'n')">
+          <input type="file" accept=".xlsx,.xls" onchange="ldf(this,'n')">
+          <div class="uz-icon">&#128203;</div>
+          <div class="uz-t">Drop or tap to browse</div>
+          <div class="uz-s">Night gate allocation (18:00-06:00+1)</div>
+          <div class="uz-ok" id="ok-n"></div>
+        </div>
+        <div class="ps" id="ps-n"></div>
+      </div>
+    </div>
+    <button class="btn-gen" onclick="gen('n')">Generate Night Report</button>
+    <div class="btn-row">
+      <button class="btn-sm" onclick="clf('n')">Clear</button>
+      <button class="btn-sm" onclick="sw('c')">24hr -></button>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-c">
+    <div class="card" style="margin-top:8px">
+      <div class="ch"><div class="ci">&#128197;</div><div class="ct">Date</div></div>
+      <div class="cb"><div class="fl"><div class="fl-l">Operations Date</div><input type="date" id="c-date"></div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ci">&#128194;</div><div class="ct">Upload Both Allocations</div></div>
+      <div class="cb">
+        <div class="uz" id="uz-cm" ondragover="dov(event,'cm')" ondragleave="dlv('cm')" ondrop="ddr(event,'cm')">
+          <input type="file" accept=".xlsx,.xls" onchange="ldf(this,'cm')">
+          <div class="uz-icon">&#9728;</div>
+          <div class="uz-t">Morning Allocation (06:00-18:00)</div>
+          <div class="uz-s">Drop or tap</div>
+          <div class="uz-ok" id="ok-cm"></div>
+        </div>
+        <div class="ps" id="ps-cm"></div>
+        <div class="uz" id="uz-cn" ondragover="dov(event,'cn')" ondragleave="dlv('cn')" ondrop="ddr(event,'cn')" style="margin-top:7px">
+          <input type="file" accept=".xlsx,.xls" onchange="ldf(this,'cn')">
+          <div class="uz-icon">&#9790;</div>
+          <div class="uz-t">Night Allocation (18:00-06:00+1)</div>
+          <div class="uz-s">Drop or tap</div>
+          <div class="uz-ok" id="ok-cn"></div>
+        </div>
+        <div class="ps" id="ps-cn"></div>
+      </div>
+    </div>
+    <button class="btn-gen" onclick="gen('c')">Generate 24hr Combined Report</button>
+    <div class="btn-row">
+      <button class="btn-sm" onclick="clf('cm');clf('cn')">Clear Both</button>
+      <button class="btn-sm" onclick="sw('m')"><- Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT VIEW -->
+<div id="report-view">
+  <div class="ss-hint" id="ss-hint">Take screenshot now, then tap Back</div>
+
+  <div class="report-card" id="report-card">
+    <!-- HEADER -->
+    <div class="rc-header">
+      <div class="rc-deco1"></div>
+      <div class="rc-deco2"></div>
+      <div class="rc-deco3"></div>
+
+      <!-- Plane SVG watermark -->
+      <svg class="rc-plane" viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg" fill="white">
+        <ellipse cx="100" cy="60" rx="78" ry="13"/>
+        <path d="M178 60 Q198 60 198 63 Q198 66 178 66Z"/>
+        <path d="M112 60 L145 18 L160 18 L132 60Z"/>
+        <path d="M112 60 L145 102 L160 102 L132 60Z"/>
+        <path d="M36 60 L18 40 L27 40 L42 60Z"/>
+        <path d="M36 60 L18 80 L27 80 L42 60Z"/>
+        <ellipse cx="124" cy="33" rx="11" ry="4"/>
+        <ellipse cx="124" cy="87" rx="11" ry="4"/>
+        <rect x="68" y="56" width="64" height="5" rx="2.5" fill="rgba(255,255,255,0.35)"/>
+      </svg>
+
+      <div class="rc-header-inner">
+        <div class="rc-title">SHARJAH AIRPORT</div>
+        <div class="rc-sub">Daily Traffic Report</div>
+        <div class="rc-date-pill">
+          <span style="font-size:13px">&#128197;</span>
+          <span class="rc-date-pill-text" id="r-date-badge">--</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="runway-strip"></div>
+
+    <div class="rc-body">
+
+      <!-- ARRIVALS | TOTAL | DEPARTURES -->
+      <div class="main-stats">
+        <div class="stat-box arr-box">
+          <div class="sb-label"><span class="sb-icon">&#9660;</span> ARRIVALS</div>
+          <div class="sb-val" id="r-arr-pax">0</div>
+          <div class="sb-pax">PAX</div>
+          <div class="sb-pill" id="r-arr-flts">0 FLTS</div>
+        </div>
+
+        <div class="stat-center">
+          <div class="sc-circle">
+            <div class="sc-icon">&#128101;</div>
+            <div class="sc-lbl">TOTAL<br>PAX</div>
+            <div class="sc-val" id="r-total-center">0</div>
+          </div>
+        </div>
+
+        <div class="stat-box dep-box">
+          <div class="sb-label"><span class="sb-icon">&#9650;</span> DEPARTURES</div>
+          <div class="sb-val" id="r-dep-pax">0</div>
+          <div class="sb-pax">PAX</div>
+          <div class="sb-pill" id="r-dep-flts">0 FLTS</div>
+        </div>
+      </div>
+
+      <!-- DEP BREAKDOWN -->
+      <div class="dep-bk">
+        <div class="db-header">Departure Breakdown</div>
+        <div class="db-row">
+          <span class="db-lbl"><span class="db-dot dot-shj"></span>From SHJ</span>
+          <span class="db-val" id="r-dep-local">0<span class="db-unit">PAX</span></span>
+        </div>
+        <div class="db-row">
+          <span class="db-lbl"><span class="db-dot dot-conn"></span>Connecting</span>
+          <span class="db-val" id="r-dep-conn">0<span class="db-unit">PAX</span></span>
+        </div>
+      </div>
+
+      <!-- TOTALS -->
+      <div class="total-row">
+        <div class="total-block">
+          <div class="tb-icon">&#128101;</div>
+          <div class="tb-lbl">Total Passengers</div>
+          <div class="tb-val" id="r-total-pax">0</div>
+          <div class="tb-unit">PAX</div>
+        </div>
+        <div class="total-block">
+          <div class="tb-icon">&#9992;</div>
+          <div class="tb-lbl">Total Flights</div>
+          <div class="tb-val" id="r-total-flts">0</div>
+          <div class="tb-unit">FLTS</div>
+        </div>
+      </div>
+
+      <!-- HIGHLIGHTS -->
+      <div class="hl-box">
+        <div class="hl-header">
+          <div class="hl-header-icon">&#128200;</div>
+          <div class="hl-header-text">Key Highlights</div>
+        </div>
+        <div class="hl-items">
+          <div class="hl-item">
+            <div class="hl-item-icon">&#128101;</div>
+            <div class="hl-item-text"><strong>Passenger Traffic</strong><span id="hl1"></span></div>
+          </div>
+          <div class="hl-item">
+            <div class="hl-item-icon">&#9992;</div>
+            <div class="hl-item-text"><strong>Flight Operations</strong><span id="hl2"></span></div>
+          </div>
+          <div class="hl-item">
+            <div style="width:44px;height:44px;border-radius:50%;border:4px solid #1565C0;display:flex;align-items:center;justify-content:center;margin:0 auto 4px;font-size:13px;font-weight:900;color:#0D2E5C" id="hl-pct-circle">0%</div>
+            <div class="hl-item-text"><strong>Departures</strong><span id="hl3"></span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="rc-footer">
+      <div class="rf-left">Sharjah Airport &bull; Operations</div>
+      <svg class="rf-plane" viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg" fill="white">
+        <ellipse cx="30" cy="18" rx="23" ry="4"/>
+        <path d="M53 18 Q60 18 60 19.5 Q60 21 53 21Z"/>
+        <path d="M34 18 L43 6 L48 6 L40 18Z"/>
+        <path d="M34 18 L43 30 L48 30 L40 18Z"/>
+        <path d="M11 18 L5 11 L9 11 L13 18Z"/>
+        <path d="M11 18 L5 25 L9 25 L13 18Z"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="excl-note" id="excl-note" style="display:none"></div>
+
+  <div class="action-wrap" id="action-bar">
+    <button class="btn-action btn-bk" onclick="goBack()"><- Edit</button>
+    <button class="btn-action btn-ss" onclick="doScreenshot()">Screenshot Mode</button>
+  </div>
+</div>
+
+<script>
+const store={};
+const today=new Date().toISOString().split('T')[0];
+['m-date','n-date','c-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today;});
+
+function sw(t){['m','n','c'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('on',x===t);document.getElementById('sec-'+x).classList.toggle('on',x===t);});}
+function dov(e,id){e.preventDefault();document.getElementById('uz-'+id).style.borderColor='#1565C0';}
+function dlv(id){document.getElementById('uz-'+id).style.borderColor='';}
+function ddr(e,id){e.preventDefault();dlv(id);const f=e.dataTransfer.files[0];if(f)doLoad(f,id);}
+function ldf(inp,id){if(inp.files[0])doLoad(inp.files[0],id);}
+function clf(id){store[id]=null;const z=document.getElementById('uz-'+id);if(z){z.classList.remove('on');z.querySelector('.uz-ok').style.display='none';}const ps=document.getElementById('ps-'+id);if(ps)ps.textContent='';}
+
+function doLoad(file,id){
+  const ps=document.getElementById('ps-'+id);
+  if(ps)ps.innerHTML='<span style="color:#aaa">Reading...</span>';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      const parsed=parse(rows);
+      store[id]=parsed;
+      const z=document.getElementById('uz-'+id);
+      z.classList.add('on');
+      const ok=z.querySelector('.uz-ok');
+      ok.textContent='OK: '+file.name.substring(0,25);
+      ok.style.display='block';
+      if(ps)ps.innerHTML='<span class="ps-ok">'+parsed.depFlights+' dep / '+parsed.arrFlights+' arr'+(parsed.excl>0?' ('+parsed.excl+' excl.)':'')+'</span>';
+    }catch(err){if(ps)ps.innerHTML='<span class="ps-err">Error: '+err.message+'</span>';}
+  };
+  reader.readAsBinaryString(file);
+}
+
+function parse(rows){
+  let depFlights=0,depBkld=0,depInbd=0,arrFlights=0,arrShj=0,excl=0;
+  let mode=null,dcm=null,acm=null;
+  for(let i=0;i<rows.length;i++){
+    const row=rows[i].map(c=>String(c||'').trim());
+    const rs=row.join('\t').toUpperCase();
+    if(row.some(c=>c==='DEPARTURES'||c==='DEPARTURE')){mode='dep';dcm=null;continue;}
+    if(row.some(c=>c==='ARRIVAL'||c==='ARRIVALS')){mode='arr';acm=null;continue;}
+    if(mode==='dep'&&!dcm&&row.indexOf('FLT NO')>=0&&row.some(c=>c.toUpperCase().startsWith('BKLD'))){
+      dcm={};row.forEach((c,j)=>{const u=c.toUpperCase().replace(/\s/g,'');if(c==='FLT NO')dcm.flt=j;if(u==='BKLD')dcm.bkld=j;if(u.startsWith('INB'))dcm.inbd=j;});continue;
+    }
+    if(mode==='arr'&&!acm&&row.indexOf('FLT NO')>=0&&row.some(c=>c.toUpperCase().replace(/\s/g,'').startsWith('SHJ'))){
+      acm={};row.forEach((c,j)=>{const u=c.toUpperCase().replace(/\s/g,'');if(c==='FLT NO')acm.flt=j;if(u==='BKLD')acm.bkld=j;if(u==='SHJ')acm.shj=j;});continue;
+    }
+    if(mode==='arr'&&rs.includes('TECH-STP'))break;
+    if(mode==='dep'&&dcm&&dcm.flt!==undefined){
+      const flt=row[dcm.flt];
+      if(!flt||flt==='FLT NO'||flt==='FLIGHT'||flt==='')continue;
+      if(rs.includes('CXLD')||rs.includes('CANCEL')||flt.toUpperCase()==='XX'){excl++;continue;}
+      let bkldRaw=String(row[dcm.bkld]||'').trim();
+      let bkld;
+      if(bkldRaw.toUpperCase()==='TBA'||bkldRaw===''){
+        bkld=175; // TBA estimate: midpoint of 150-200
+      } else {
+        if(bkldRaw.includes('/'))bkldRaw=bkldRaw.split('/').pop();
+        bkld=parseInt(bkldRaw)||175;
+      }
+      let inbdRaw=String(row[dcm.inbd]||'').trim();
+      let inbd;
+      if(inbdRaw.toUpperCase()==='TBA'||inbdRaw===''){
+        inbd=60; // TBA estimate: midpoint of 50-70
+      } else {
+        if(inbdRaw.includes('/'))inbdRaw=inbdRaw.split('/').pop();
+        inbd=parseInt(inbdRaw)||0;
+      }
+      depFlights++;depBkld+=bkld;depInbd+=inbd;
+    }
+    if(mode==='arr'&&acm&&acm.flt!==undefined){
+      const flt=row[acm.flt];
+      if(!flt||flt==='FLT NO'||flt==='FLIGHT'||flt==='')continue;
+      if(rs.includes('CXLD')||rs.includes('CANCEL')||flt.toUpperCase()==='XX'){excl++;continue;}
+      let shjRaw=String(row[acm.shj]||'').trim();
+      let bkldRaw=String(row[acm.bkld]||'').trim();
+      let shj;
+      if(shjRaw.toUpperCase()==='TBA'||shjRaw===''){
+        // No SHJ figure - use 60% of BKLD if available, else 100
+        if(bkldRaw.includes('/'))bkldRaw=bkldRaw.split('/').pop();
+        const bkldNum=parseInt(bkldRaw)||0;
+        shj=bkldNum>0?Math.round(bkldNum*0.6):100;
+      } else {
+        if(shjRaw.includes('/'))shjRaw=shjRaw.split('/').pop();
+        shj=parseInt(shjRaw)||0;
+        if(shj===0){
+          // Zero SHJ but flight exists - check BKLD
+          if(bkldRaw.includes('/'))bkldRaw=bkldRaw.split('/').pop();
+          const bkldNum=parseInt(bkldRaw)||0;
+          shj=bkldNum>0?Math.round(bkldNum*0.6):100;
+        }
+      }
+      arrFlights++;arrShj+=shj;
+    }
+  }
+  return{depFlights,depBkld,depInbd,depLocal:depBkld-depInbd,arrFlights,arrBkld:arrShj,excl};
+}
+
+function n(v){return Number(v||0).toLocaleString('en-US');}
+function fd(d){if(!d)return '--';return new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}).toUpperCase();}
+
+function showReport(res,dateStr,periodStr,excl){
+  const total=res.arrBkld+res.depBkld;
+  const totalFlts=res.arrFlights+res.depFlights;
+  const pct=total>0?Math.round((res.depBkld/total)*100):0;
+  document.getElementById('r-date-badge').textContent=dateStr+' | '+periodStr;
+  document.getElementById('r-arr-pax').textContent=n(res.arrBkld);
+  document.getElementById('r-arr-flts').textContent=n(res.arrFlights)+' FLTS';
+  document.getElementById('r-dep-pax').textContent=n(res.depBkld);
+  document.getElementById('r-dep-flts').textContent=n(res.depFlights)+' FLTS';
+  document.getElementById('r-dep-local').innerHTML=n(res.depLocal)+'<span class="db-unit"> PAX</span>';
+  document.getElementById('r-dep-conn').innerHTML=n(res.depInbd)+'<span class="db-unit"> PAX</span>';
+  document.getElementById('r-total-center').textContent=n(total);
+  document.getElementById('r-total-pax').textContent=n(total);
+  document.getElementById('r-total-flts').textContent=n(totalFlts);
+  document.getElementById('hl1').textContent=' '+n(total)+' PAX for the period.';
+  document.getElementById('hl2').textContent=' '+n(res.arrFlights)+' arr & '+n(res.depFlights)+' dep.';
+  document.getElementById('hl3').textContent=' approx. '+pct+'% of total PAX.';
+  document.getElementById('hl-pct-circle').textContent=pct+'%';
+  const en=document.getElementById('excl-note');
+  if(excl>0){en.textContent=excl+' cancelled/invalid flights excluded.';en.style.display='block';}
+  else en.style.display='none';
+  document.getElementById('form-view').style.display='none';
+  document.getElementById('report-view').style.display='block';
+  window.scrollTo(0,0);
+}
+
+function gen(tab){
+  if(tab==='m'){const d=store['m'];if(!d){alert('Upload morning allocation first.');return;}showReport(d,fd(document.getElementById('m-date').value),'0600-1800',d.excl);}
+  else if(tab==='n'){const d=store['n'];if(!d){alert('Upload night allocation first.');return;}showReport(d,fd(document.getElementById('n-date').value),'1800-0600 NEXT DAY',d.excl);}
+  else{
+    const dm=store['cm'],dn=store['cn'];
+    if(!dm&&!dn){alert('Upload at least one file.');return;}
+    const c={depFlights:(dm?.depFlights||0)+(dn?.depFlights||0),depBkld:(dm?.depBkld||0)+(dn?.depBkld||0),depInbd:(dm?.depInbd||0)+(dn?.depInbd||0),depLocal:(dm?.depLocal||0)+(dn?.depLocal||0),arrFlights:(dm?.arrFlights||0)+(dn?.arrFlights||0),arrBkld:(dm?.arrBkld||0)+(dn?.arrBkld||0),excl:(dm?.excl||0)+(dn?.excl||0)};
+    showReport(c,fd(document.getElementById('c-date').value),'0600-0600 NEXT DAY',c.excl);
+  }
+}
+
+function goBack(){
+  document.getElementById('ss-hint').style.display='none';
+  document.getElementById('action-bar').style.display='';
+  document.getElementById('form-view').style.display='block';
+  document.getElementById('report-view').style.display='none';
+  window.scrollTo(0,0);
+}
+
+function doScreenshot(){
+  document.getElementById('action-bar').style.display='none';
+  document.getElementById('excl-note').style.display='none';
+  document.getElementById('ss-hint').style.display='block';
+  window.scrollTo(0,0);
+  setTimeout(()=>{
+    document.getElementById('ss-hint').style.display='none';
+    document.getElementById('action-bar').style.display='';
+  },8000);
+}
+</script>
+</body>
+</html>
